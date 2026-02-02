@@ -1,30 +1,24 @@
 pipeline {
     agent any
-    
-    environment {
-        // Invocamos la credencial que creamos en el paso 1.3
-        AWS_ACCESS_KEY_ID     = credentials('aws-credentials')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-credentials')
-    }
-
     stages {
-        stage('Install AWS CLI') {
+        stage('cli installation') {
             steps {
-                sh '''
-                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-                unzip -o awscliv2.zip
-                ./aws/install --install-dir /tmp/aws-cli/ --bin-dir /tmp/aws-cli/bin --update
-                '''
+                sh 'mkdir -p /var/jenkins_home/workspace/temp'
+                dir('/var/jenkins_home/workspace/temp') {
+                    sh 'curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"'
+                    sh 'unzip -o awscliv2.zip'
+                    sh './aws/install -b /tmp/aws-cli -i /var/jenkins_home/workspace/temp/aws-cli --update'
+                }
             }
         }
-
-        stage('Push files') {
+        stage('push files') {
             steps {
-                // Aquí usamos la ruta donde se instaló el CLI arriba (/tmp/aws-cli/bin/aws)
-                // Modifica el nombre del bucket si es necesario
-                sh '/tmp/aws-cli/bin/aws s3 cp index.html s3://efm1-erika-masterd/'
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'aws-credentials', 
+                usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    // Aquí completamos tu comando para subir el index.html
+                    sh '/tmp/aws-cli/aws s3 cp index.html s3://efm1-erika-masterd/'
+                }
             }
         }
     }
 }
-
